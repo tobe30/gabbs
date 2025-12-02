@@ -201,7 +201,7 @@ const Checkout = () => {
                 type="submit"
                 className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:brightness-90"
               >
-                Place Order - ${total.toFixed(2)}
+                Place Order - ₦{total.toFixed(2)}
               </button>
             </form>
           </div>
@@ -218,7 +218,7 @@ const Checkout = () => {
                       {item.name} ×{item.quantity}
                     </span>
                     <span className="font-medium">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      ₦{(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
@@ -252,13 +252,13 @@ const Checkout = () => {
               <div className="space-y-3 border-t pt-4">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>₦{subtotal.toFixed(2)}</span>
                 </div>
 
                 {discount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount ({discount * 100}%)</span>
-                    <span>- ${discountAmount.toFixed(2)}</span>
+                    <span>- ₦{discountAmount.toFixed(2)}</span>
                   </div>
                 )}
 
@@ -270,7 +270,7 @@ const Checkout = () => {
                 <div className="border-t pt-3">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span className="text-primary">${total.toFixed(2)}</span>
+                    <span className="text-primary">₦{total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

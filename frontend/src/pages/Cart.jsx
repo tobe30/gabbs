@@ -49,7 +49,7 @@ const Cart = () => {
 
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg mb-2">{item.name}</h3>
-                  <p className="text-primary font-bold text-xl">${item.price}</p>
+                  <p className="text-primary font-bold text-xl">₦{item.price.toLocaleString()}</p>
                 </div>
 
                 <div className="flex flex-col items-end justify-between">
@@ -87,7 +87,7 @@ const Cart = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">${subtotal.toFixed(2)}</span>
+                  <span className="font-medium">₦{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
@@ -96,7 +96,7 @@ const Cart = () => {
                 <div className="border-t border-border pt-3">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span className="text-primary">${subtotal.toFixed(2)}</span>
+                    <span className="text-primary">₦{subtotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

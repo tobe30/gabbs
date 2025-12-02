@@ -97,7 +97,7 @@ const ProductDetail = () => {
             </div>
 
             <div className="mb-6">
-              <p className="text-5xl font-bold text-primary mb-2">${product.price}</p>
+              <p className="text-5xl font-bold text-primary mb-2">₦{product.price.toLocaleString()}</p>
               {product.inStock ? (
                 <p className="text-green-600 font-medium">In Stock</p>
               ) : (
