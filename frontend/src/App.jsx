@@ -14,11 +14,13 @@ import AdminProduct from "./pages/admin/AdminProduct";
 import AdminOrders from "./pages/admin/AdminOrders";
 import Coupon from "./pages/admin/Coupon";
 import Orders from "./pages/Orders";
+import ScrollToTop from "./ScrollToTop";
 
 
 function App() {
   return (
     <div>
+      <ScrollToTop />
       <CartProvider>
       <Routes>
         <Route path="/" element={<Home />} />

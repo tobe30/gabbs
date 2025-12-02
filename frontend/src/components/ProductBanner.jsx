@@ -54,7 +54,7 @@ const ProductBanner = () => {
 
             {/* Buttons */}
             <div className="flex flex-wrap gap-3 sm:gap-4 pt-4">
-              <Link to="/product/1">
+              <Link to="/products">
                 <button className="bg-white text-slate-900 hover:bg-slate-100 font-bold text-base sm:text-lg px-6 sm:px-8 py-3 rounded-lg shadow-lg group transition-all">
                   Shop Now
                   <ArrowRight className="inline-block ml-2 h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform" />

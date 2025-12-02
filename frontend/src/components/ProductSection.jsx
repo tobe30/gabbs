@@ -6,7 +6,7 @@ const ProductSection = ({ title, products, viewAllLink = "/products" }) => {
     <section className="py-12">
       {/* Section header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold">{title}</h2>
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold">{title}</h2>
         <Link
           to={viewAllLink}
           className="text-red-500 hover:text-accent/80 flex items-center gap-1 font-medium transition-colors"

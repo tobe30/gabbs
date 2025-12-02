@@ -10,7 +10,7 @@ import { useState } from 'react'
 
 const Home = () => {
   const topSellers = products.filter((p) => p.rating >= 4.7);
-  const blackFridayDeals = products.filter((p) => p.price < 200);
+  const blackFridayDeals =  products.filter((p) => p.rating >= 4.0);
   const recommended = products.slice(0, 5);
   const newArrivals = products.filter((p) => p.inStock).slice(0, 5);
 
