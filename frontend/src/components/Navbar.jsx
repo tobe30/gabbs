@@ -1,13 +1,17 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingCart, Search, Menu, User } from "lucide-react";
-import { useCart } from "../contexts/CartContext"; // Import your Cart context
+import { ShoppingCart, Search, Menu, X, User } from "lucide-react";
+import { useCart } from "../contexts/CartContext";
 import { useClerk, UserButton, useUser } from "@clerk/clerk-react";
 
 const Navbar = () => {
-  const { cartCount } = useCart(); // Get total items in cart
-
-  const {user} = useUser();
+  const { cartCount } = useCart();
+  const { user } = useUser();
   const { openSignIn } = useClerk();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const menuItems = ["Home", "Products", "Categories", "About", "Contact"];
 
   return (
     <nav className="sticky top-0 z-50 bg-white shadow-md">
@@ -21,7 +25,7 @@ const Navbar = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8 text-base font-medium">
-            {["Home", "Products", "Categories", "About", "Contact"].map((item) => (
+            {menuItems.map((item) => (
               <Link
                 key={item}
                 to={item === "Home" ? "/" : `/${item.toLowerCase()}`}
@@ -38,18 +42,15 @@ const Navbar = () => {
             <Link to="/products" className="hover:text-red-600 transition-colors">
               <Search className="h-5 w-5" />
             </Link>
-           {user ? (
-  <UserButton />
-) : (
-  <button
-    onClick={openSignIn}
-    className="hover:text-red-600 transition-colors"
-  >
-    <User className="h-5 w-5" />
-  </button>
-)}
 
-            
+            {user ? (
+              <UserButton />
+            ) : (
+              <button onClick={openSignIn} className="hover:text-red-600 transition-colors">
+                <User className="h-5 w-5" />
+              </button>
+            )}
+
             <Link to="/cart" className="relative hover:text-red-600 transition-colors">
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
@@ -59,12 +60,31 @@ const Navbar = () => {
               )}
             </Link>
 
-            {/* Mobile Menu */}
-            <button className="md:hidden">
-              <Menu className="h-6 w-6" />
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden"
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-2 bg-white shadow-md rounded-lg p-4 space-y-4">
+            {menuItems.map((item) => (
+              <Link
+                key={item}
+                to={item === "Home" ? "/" : `/${item.toLowerCase()}`}
+                className="block text-gray-700 font-medium hover:text-red-600 transition-colors"
+                onClick={() => setMobileMenuOpen(false)} // close menu on click
+              >
+                {item}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </nav>
   );
