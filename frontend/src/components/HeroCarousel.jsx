@@ -90,8 +90,8 @@ const HeroCarousel = () => {
                 <div className="absolute inset-0 bg-black/40" />
 
                 {/* Content */}
-                <div className="container mx-auto px-4 md:px-12 z-10">
-                  <div className="max-w-2xl animate-fade-in text-white text-center md:text-left">
+                <div className="container mx-auto px-6 md:px-16 lg:px-24 z-10">
+                  <div className="max-w-lg md:max-w-xl lg:max-w-2xl animate-fade-in text-white text-center md:text-left">
                     <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight drop-shadow-lg">
                       {slide.title}
                     </h2>
@@ -114,16 +114,16 @@ const HeroCarousel = () => {
       {/* Prev / Next Buttons */}
       <button
         onClick={scrollPrev}
-        className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/90 hover:bg-white border border-white/20 flex items-center justify-center shadow-lg transition-colors z-10"
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 hover:bg-white border border-white/20 flex items-center justify-center shadow-lg transition-colors z-10"
       >
-        <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 text-black" />
+        <ChevronLeft className="h-6 w-6 text-black" />
       </button>
 
       <button
         onClick={scrollNext}
-        className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/90 hover:bg-white border border-white/20 flex items-center justify-center shadow-lg transition-colors z-10"
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 hover:bg-white border border-white/20 flex items-center justify-center shadow-lg transition-colors z-10"
       >
-        <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6 text-black" />
+        <ChevronRight className="h-6 w-6 text-black" />
       </button>
 
       {/* Pagination */}

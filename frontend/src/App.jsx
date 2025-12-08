@@ -15,9 +15,17 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import Coupon from "./pages/admin/Coupon";
 import Orders from "./pages/Orders";
 import ScrollToTop from "./ScrollToTop";
+import { useAuth } from "@clerk/clerk-react";
+import { useEffect } from "react";
 
 
 function App() {
+
+  const {getToken} = useAuth();
+  useEffect(() => {
+    getToken().then((token) => console.log(token));
+  },[])
+
   return (
     <div>
       <ScrollToTop />
