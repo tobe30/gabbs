@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors'
 import { connectDB } from './lib/db.js';
 import "dotenv/config"; 
 import { clerkMiddleware, requireAuth } from '@clerk/express'
@@ -9,9 +10,10 @@ import userRoutes from './routes/user.routes.js';
 
 const app = express();
 
- await connectDB()
+await connectDB()
 await connectCloudinary();
 
+app.use(cors())
 app.use(clerkMiddleware());// Clerk middleware to handle authentication
 
 app.use(requireAuth())// Protect all routes below this middleware
