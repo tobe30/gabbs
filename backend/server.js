@@ -12,7 +12,6 @@ await connectDB()
 
 app.use(cors());
 app.use(clerkMiddleware());// Clerk middleware to handle authentication
-app.use(requireAuth())// Protect all routes below this middleware
 
 //routes
 app.get('/', (req, res) => {
