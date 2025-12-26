@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import 'dotenv/config'
 import { connectDB } from './lib/db.js';
-import { clerkMiddleware, requireAuth } from '@clerk/express'
+import { clerkMiddleware } from '@clerk/express'
 import productRoutes from './routes/product.routes.js';
 import userRoutes from './routes/user.routes.js';
 import couponRoutes from './routes/coupon.routes.js';
@@ -21,7 +21,10 @@ await connectDB()
 await connectCloudinary();
 
 app.use(cors({
-    origin: 'http://localhost:5173', // your frontend URL
+    origin:[ 
+        'http://localhost:5173',
+        'https://gabbs-psi.vercel.app'
+    ], // your frontend URL
     credentials: true,
 }));
 
