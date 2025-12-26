@@ -6,7 +6,7 @@ import { clerkMiddleware } from '@clerk/express'
 import productRoutes from './routes/product.routes.js';
 import userRoutes from './routes/user.routes.js';
 import couponRoutes from './routes/coupon.routes.js';
-import { clerkWebhooks } from './controllers/webhooks.js';
+import { clerkWebhooks, stripeWebhook } from './controllers/webhooks.js';
 import connectCloudinary from './lib/cloudinary.js';
 import cartRoutes from './routes/cart.routes.js';
 import orderRoutes from './routes/order.routes.js';
@@ -34,6 +34,9 @@ app.use(clerkMiddleware());// Clerk middleware to handle authentication
 app.get('/', (req, res) => {
     res.send('Hello World!'); 
 })
+
+app.post('/api/stripe', express.raw({ type: 'application/json'}), stripeWebhook)
+
 app.use(express.json());// To parse JSON request bodies
 
 app.post('/clerk', express.json(), clerkWebhooks)
