@@ -78,37 +78,18 @@ export const stripeWebhook = async (req, res) => {
   }
 
   try {
-    switch (event.type) {
-      case "payment_intent.succeeded": {
-        const paymentIntent = event.data.object;
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const { orderId, userId, appId } = session.metadata;
 
-        const { orderId, userId, appId } = paymentIntent.metadata;
+      if (appId !== "gabbs") return res.json({ received: true });
 
-        if (appId !== "gabbs") {
-          return res.json({ received: true });
-        }
+      await Order.findByIdAndUpdate(orderId, { isPaid: true, paymentStatus: "PAID" });
+      await User.findByIdAndUpdate(userId, { cart: [] });
 
-        // ✅ mark order as paid
-        await Order.findByIdAndUpdate(orderId, {
-          isPaid: true,
-          paymentStatus: "PAID",
-        });
-
-        // ✅ clear cart
-        await User.findByIdAndUpdate(userId, {
-          cart: [],
-        });
-
-        console.log("✅ Order paid & cart cleared");
-        break;
-      }
-
-      case "payment_intent.canceled":
-        console.log("❌ Payment failed");
-        break;
-
-      default:
-        console.log("Unhandled event:", event.type);
+      console.log("✅ Order paid & cart cleared");
+    } else {
+      console.log("Unhandled event:", event.type);
     }
 
     res.json({ received: true });
