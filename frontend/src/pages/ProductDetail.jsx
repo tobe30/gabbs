@@ -1,29 +1,73 @@
-import { useParams, Link } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { products } from "../assets/products";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Star, ArrowLeft, ShoppingCart, User } from "lucide-react";
 import { useCart } from "../contexts/CartContext";
-import { Toaster, toast } from "react-hot-toast";
+import { useQuery } from "@tanstack/react-query";
+import { axiosInstance } from "../lib/axios";
+import ProductDetailSkeleton from "../components/ProductDetailSkeleton";
+import toast from "react-hot-toast";
 
 // Mock reviews data
-const mockReviews = [
-  { id: 1, author: "Sarah Johnson", date: "2024-11-15", rating: 5, comment: "Excellent product! Exceeded my expectations in every way." },
-  { id: 2, author: "Michael Chen", date: "2024-11-10", rating: 5, comment: "Great quality and fast shipping. Very satisfied with my purchase." },
-  { id: 3, author: "Emily Rodriguez", date: "2024-11-05", rating: 4, comment: "Good value for money. Would recommend to others." },
-  { id: 4, author: "David Thompson", date: "2024-10-28", rating: 4, comment: "Solid product, does exactly what it promises." }
-];
 
 const ProductDetail = () => {
   const { id } = useParams();
-  const { addToCart, removeFromCart, cartItems } = useCart();
+  const navigate = useNavigate();
+  const { addToCart, decrementFromCart, cartItems } = useCart();
 
-  const product = products.find((p) => p.id === Number(id));
+  const { data: product, isLoading, error} = useQuery({
+    queryKey: ["products", id],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/products/${id}`);
+      return res.data.product; 
+  },
+  })  
+
+  const { data: ratingData, isLoading: ratingLoading } = useQuery({
+  queryKey: ["product-ratings", id],
+  queryFn: async () => {
+    const res = await axiosInstance.get(`/ratings/product-rating/${id}`);
+    return res.data;
+  },
+  enabled: !!id,
+});
+
+console.log(ratingData)
+
+
+if (isLoading) {
+  return (
+    <div className="min-h-screen bg-background">
+     
+      <ProductDetailSkeleton />
+     
+    </div>
+  );
+}
+
+if (error || product?.error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="shadow-lg rounded-lg p-8 max-w-md w-full text-center">
+          <p className="text-red-500 text-lg">
+            {product?.error || "Error loading booking"}
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            className="mt-4 bg-gray-800 text-white px-6 py-2 rounded hover:bg-gray-900 transition"
+          >
+            Go Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
+
 
   if (!product) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
+        
         <div className="container mx-auto px-4 py-20 text-center">
           <h1 className="text-2xl font-bold mb-4">Product not found</h1>
           <Link to="/products">
@@ -32,29 +76,26 @@ const ProductDetail = () => {
             </button>
           </Link>
         </div>
-        <Footer />
+      
       </div>
     );
   }
 
-  const quantity = cartItems.find((i) => i.id === product.id)?.quantity || 0;
+  const quantity = cartItems.find((i) => i.productId === product._id)?.quantity || 0;
+
 
   const handleAdd = () => {
     addToCart(product);
     toast.success(`${product.name} added to cart`);
   };
 
-  const handleSubtract = () => {
-    if (quantity === 1) {
-      removeFromCart(product.id);
-    } else if (quantity > 1) {
-      removeFromCart(product.id, true);
-    }
-  };
+const handleSubtract = () => {
+  decrementFromCart(product);
+};
+
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <div className="container mx-auto px-4 py-8">
         <Link
           to="/products"
@@ -68,7 +109,7 @@ const ProductDetail = () => {
           {/* Product Image with grey border */}
           <div className="rounded-xl overflow-hidden border border-gray-300">
             <img
-              src={product.image}
+              src={product.images}
               alt={product.name}
               className="w-full h-auto object-cover"
             />
@@ -83,17 +124,29 @@ const ProductDetail = () => {
 
             <div className="flex items-center gap-4 mb-6">
               <div className="flex items-center gap-2">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-5 w-5 ${i < Math.floor(product.rating) ? "fill-red-500 text-red-500" : "text-gray-300"}`}
-                    />
-                  ))}
-                </div>
-                <span className="font-medium">{product.rating}</span>
-              </div>
-              <span className="text-gray-400">by {product.company}</span>
+<div className="flex">
+  {[...Array(5)].map((_, i) => (
+    <Star
+      key={i}
+      className={`h-5 w-5 ${
+        i < Math.round(ratingData?.average || 0)
+          ? "fill-red-500 text-red-500"
+          : "text-gray-300"
+      }`}
+    />
+  ))}
+</div>
+
+  <span className="font-medium">
+  {ratingData?.average?.toFixed(1) || "0.0"}
+</span>
+<span className="text-gray-400">
+  ({ratingData?.count || 0} reviews)
+</span>
+
+</div>
+
+              <span className="text-gray-400">by Gabbs</span>
             </div>
 
             <div className="mb-6">
@@ -151,51 +204,61 @@ const ProductDetail = () => {
         {/* Reviews Section with grey card and grey text */}
 <div className="mt-16">
   <h2 className="text-3xl font-bold mb-8">Customer Reviews</h2>
-  <div className="space-y-6">
-    {mockReviews.map((review) => (
-      <div key={review.id} className="bg-gray-100 rounded-lg p-6 text-gray-700">
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0">
+
+  {ratingData?.ratings?.length > 0 ? (
+    <div className="space-y-6">
+      {ratingData.ratings.map((review) => (
+        <div
+          key={review._id}
+          className="bg-gray-100 rounded-lg p-6 text-gray-700"
+        >
+          <div className="flex items-start gap-4">
             <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
               <User className="h-6 w-6 text-gray-700" />
             </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h4 className="font-semibold mb-1">{review.author}</h4>
-                <div className="flex items-center gap-1 pointer-events-none">
-  {[...Array(5)].map((_, i) => (
-    <Star
-      key={i}
-      className={`h-4 w-4 ${i < review.rating ? "text-red-500" : "text-gray-400"}`}
-      fill={i < review.rating ? "currentColor" : "none"} // filled for rated stars, empty for others
-      stroke={i < review.rating ? "none" : "currentColor"} // no border for filled stars
-    />
-  ))}
-</div>
 
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h4 className="font-semibold mb-1">
+                    {review.userName || "Anonymous"}
+                  </h4>
+
+                  <div className="flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${
+                          i < review.rating
+                            ? "text-red-500"
+                            : "text-gray-400"
+                        }`}
+                        fill={i < review.rating ? "currentColor" : "none"}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <time className="text-sm text-gray-500">
+                  {new Date(review.createdAt).toLocaleDateString()}
+                </time>
               </div>
-              <time className="text-sm text-gray-500">
-                {new Date(review.date).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </time>
+
+              <p>{review.review}</p>
             </div>
-            <p>{review.comment}</p>
           </div>
         </div>
-      </div>
-    ))}
-  </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-gray-500">No reviews yet</p>
+  )}
 </div>
 
+
       </div>
 
-      <Footer />
-      <Toaster position="top-right" />
+
     </div>
   );
 };

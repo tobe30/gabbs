@@ -8,7 +8,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
-import Layout from "./pages/Layout";
+import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import AdminProduct from "./pages/admin/AdminProduct";
 import AdminOrders from "./pages/admin/AdminOrders";
@@ -17,10 +17,13 @@ import Orders from "./pages/Orders";
 import ScrollToTop from "./ScrollToTop";
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect } from "react";
+import AdminAddProduct from "./pages/admin/AdminAddProduct";
+import ProtectedRoute from "./pages/ProtectedRoute";
+import { Toaster } from "react-hot-toast";
+import Layout from "./components/Layout";
 
 
 function App() {
-
   const {getToken} = useAuth();
   useEffect(() => {
     getToken().then((token) => console.log(token));
@@ -31,6 +34,7 @@ function App() {
       <ScrollToTop />
       <CartProvider>
       <Routes>
+        <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/products" element={<Products />} />
         <Route path="/product/:id" element={<ProductDetail />} />
@@ -40,29 +44,21 @@ function App() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<Orders />} />
-        <Route path="/admin" element={<Layout />} >
+</Route>
+        <Route element={<ProtectedRoute requireAdmin={true} />}>       
+        <Route path="/admin" element={<AdminLayout />} >
             <Route index element={<Dashboard />} />
             <Route path="product" element={<AdminProduct />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="coupons" element={<Coupon />} />
+            <Route path="add-product" element={<AdminAddProduct />} />
+
          </Route>
-        
-        {/* <Route
-            path="/admin"
-            element={
-              <ProtectedAdminRoute isAdmin={true}>
-                <AdminLayout />
-              </ProtectedAdminRoute>
-            }
-          >
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="products" element={<ProductsAdmin />} />
-            <Route path="orders" element={<OrdersAdmin />} />
-            <Route path="coupons" element={<CouponsAdmin />} />
-          </Route> */}
+         </Route>
 
       </Routes>
       </CartProvider>
+      <Toaster/>
     </div>
   );
 }

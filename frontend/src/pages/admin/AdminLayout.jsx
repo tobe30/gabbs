@@ -1,11 +1,13 @@
 import { Calendar, Menu, X } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link, Outlet } from 'react-router-dom';
-import Sidebar from '../components/admin/Sidebar';
-import Footer from '../components/admin/Footer';
+import Sidebar from '../../components/admin/Sidebar';
+import Footer from '../../components/admin/Footer';
+import { UserButton, useUser } from '@clerk/clerk-react';
 
-const Layout = () => {
+const AdminLayout = () => {
   const [sidebar, setSidebar] = useState(false);
+  const { user } = useUser();
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -14,29 +16,42 @@ const Layout = () => {
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 bg-[#F4F7FB]">
-
         {/* NAVBAR */}
         <nav className="w-full px-8 min-h-14 flex items-center justify-between border-b border-gray-200 bg-white">
-
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
-            <img src="/gabbs-logo.png" alt="Gabbs" className="h-16 md:h-20" />
+            {/* <img src="/gabbs-logo.png" alt="Gabbs" className="h-16 md:h-20" /> */}
           </Link>
 
           {/* Right side: Profile + Toggle */}
           <div className="flex items-center gap-5">
-
             {/* Profile */}
-            <div className="flex items-center gap-2 cursor-pointer">
-              <img
-                src="/avatar.png"
-                alt="Profile"
-                className="w-8 h-8 rounded-full border border-gray-300"
-              />
-              <span className="font-medium text-gray-700 hidden sm:block">
-                Admin
-              </span>
-            </div>
+            {user ? (
+              <div className="flex items-center gap-2 cursor-pointer">
+                {/* Wrap your custom avatar inside UserButton */}
+                <UserButton
+                  
+                  appearance={{
+                    elements: {
+                      userButtonAvatarBox:
+                        'w-8 h-8 rounded-full border border-gray-300 overflow-hidden',
+                    },
+                  }}
+                >
+                  {/* Custom avatar inside UserButton */}
+                  <img
+                    src={user.imageUrl}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full border border-gray-300"
+                  />
+                </UserButton>
+                <span className="font-medium text-gray-700 hidden sm:block">
+                  Admin
+                </span>
+              </div>
+            ) : (
+              <span>Loading...</span>
+            )}
 
             {/* Menu Toggle for Mobile */}
             {sidebar ? (
@@ -65,4 +80,4 @@ const Layout = () => {
   );
 };
 
-export default Layout;
+export default AdminLayout;

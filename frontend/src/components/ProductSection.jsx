@@ -20,14 +20,14 @@ const ProductSection = ({ title, products, viewAllLink = "/products" }) => {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {products.slice(0, 5).map((product, index) => (
           <div
-            key={product.id}
+            key={product._id}
             className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 animate-fade-in"
             style={{ animationDelay: `${index * 100}ms` }}
           >
-            <Link to={`/product/${product.id}`}>
+            <Link to={`/product/${product._id}`}>
               <div className="aspect-square overflow-hidden bg-gray-50">
                 <img
-                  src={product.image}
+                  src={product.images}
                   alt={product.name}
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                 />
@@ -35,16 +35,30 @@ const ProductSection = ({ title, products, viewAllLink = "/products" }) => {
             </Link>
 
             <div className="p-3">
-              <Link to={`/product/${product.id}`}>
+              <Link to={`/product/${product._id}`}>
                 <h3 className="font-semibold text-sm mb-2 line-clamp-2 hover:text-primary transition-colors min-h-[40px]">
                   {product.name}
                 </h3>
               </Link>
 
-              <div className="flex items-center gap-1 mb-2">
-                <Star className="h-3 w-3 fill-red-500 text-red-500" />
-                <span className="text-xs font-medium">{product.rating}</span>
-              </div>
+               <div className="flex items-center gap-1 mb-2">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < Math.round(product.ratingStats?.average || 0)
+                              ? "text-red-400 fill-red-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                      <span className="text-sm font-medium">
+                        {product.ratingStats?.average?.toFixed(1) || "0.0"}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        ({product.ratingStats?.count || 0})
+                      </span>
+                    </div>
 
               <div>
                 <p className="text-xl font-bold text-primary">₦{product.price.toLocaleString()}</p>

@@ -1,23 +1,21 @@
-import { House, LayoutListIcon, LogOut, SquarePenIcon, TicketPercentIcon } from "lucide-react";
+import { House, LayoutListIcon, SquarePenIcon, TicketPercentIcon } from "lucide-react";
 import React from "react";
 import { NavLink } from "react-router-dom";
+import { useUser } from "@clerk/clerk-react";
 
 const navItems = [
-  { to: "", label: "Dashboard", Icon: House },
+  { to: "/admin", label: "Dashboard", Icon: House },
   { to: "/admin/product", label: "Add Product", Icon: SquarePenIcon },
   { to: "/admin/orders", label: "Orders", Icon: LayoutListIcon },
-  { to: "/admin/coupons", label: "coupons", Icon: TicketPercentIcon },
-
+  { to: "/admin/coupons", label: "Coupons", Icon: TicketPercentIcon },
 ];
 
 const Sidebar = ({ sidebar, setSidebar }) => {
-  // Fake frontend-only username
-  const fakeAdminUser = {
-    username: "Admin User",
-  };
+
+
+  
 
   const handleLogout = () => {
-    // Frontend only — just redirect or clear localStorage
     console.log("Logged out");
     window.location.href = "/";
   };
@@ -33,17 +31,18 @@ const Sidebar = ({ sidebar, setSidebar }) => {
     >
       <div className="my-7 w-full">
         <img
-          src="/gehgeh.jpeg"
+          src="/gabbs-logo.png"
           alt="user avatar"
           className="w-13 rounded-full mx-auto"
         />
-        <h1 className="mt-1 text-center">{fakeAdminUser.username}</h1>
+        <h1 className="mt-1 text-center">Gabbs Ultramart</h1>
 
         <div className="px-6 mt-5 text-sm text-gray-600 font-medium">
           {navItems.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
               to={to}
+              end={to === "/admin"} // only exact match for dashboard
               onClick={() => setSidebar(false)}
               className={({ isActive }) =>
                 `px-3.5 py-2.5 flex items-center gap-3 rounded ${
@@ -53,9 +52,7 @@ const Sidebar = ({ sidebar, setSidebar }) => {
             >
               {({ isActive }) => (
                 <>
-                  <Icon
-                    className={`w-4 h-4 ${isActive ? "text-white" : ""}`}
-                  />
+                  <Icon className={`w-4 h-4 ${isActive ? "text-white" : ""}`} />
                   {label}
                 </>
               )}
@@ -63,7 +60,6 @@ const Sidebar = ({ sidebar, setSidebar }) => {
           ))}
         </div>
       </div>
-
     </div>
   );
 };

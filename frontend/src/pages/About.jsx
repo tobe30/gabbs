@@ -1,5 +1,3 @@
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
 import { Users, Target, Heart, Package, TrendingUp, Shield } from "lucide-react";
 
 import aboutTeam from "../assets/gabbs-carousel.png";
@@ -9,7 +7,6 @@ import aboutCustomers from "../assets/wmremove-transformed.jpeg";
 export default function About() {
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-primary/10 to-background py-24">
@@ -151,7 +148,6 @@ export default function About() {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 }

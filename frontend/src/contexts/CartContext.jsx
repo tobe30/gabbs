@@ -1,116 +1,183 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "@clerk/clerk-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { addToCartApi, clearCartApi, fetchCart, removeFromCartApi, verifyCoupon } from "../lib/api";
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState(() => {
-    const saved = localStorage.getItem("cart");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+  
+const { data } = useQuery({
+  queryKey: ["cart"],
+  queryFn: async () => {
+    const token = await getToken();
+    return fetchCart(token);
+  },
+  initialData: { cart: [] },
+});
 
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cartItems));
-  }, [cartItems]);
+
+   const cartItems = data?.cart || [];
+
 
   // --------------------------
   // ADD TO CART
   // --------------------------
-  const addToCart = (product) => {
-    setCartItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      } else {
-        return [...prev, { ...product, quantity: 1 }];
-      }
-    });
-  };
+const addToCartMutation = useMutation({
+  mutationFn: async (product) => {
+    const token = await getToken();
+    return addToCartApi(product, token);
+  },
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
+});
 
-  // --------------------------
-  // REMOVE OR DECREMENT
-  // --------------------------
-  const removeFromCart = (productId, decrement = false) => {
-    setCartItems((prev) =>
-      prev
-        .map((item) => {
-          if (item.id === productId) {
-            if (decrement) {
-              return { ...item, quantity: item.quantity - 1 };
-            } else {
-              return null; // remove completely
-            }
-          }
-          return item;
-        })
-        .filter((item) => item && item.quantity > 0)
+const removeFromCartMutation = useMutation({
+  mutationFn: async (productId) => {
+    const token = await getToken();
+    return removeFromCartApi({ productId }, token);
+  },
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
+});
+
+const clearCartMutation = useMutation({
+  mutationFn: async () => {
+    const token = await getToken();
+    return clearCartApi(token);
+  },
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
+});
+
+const decrementFromCartMutation = useMutation({
+  mutationFn: async (payload) => {
+    const token = await getToken();
+
+    // 🔥 NORMALIZE INPUT
+    const productId =
+      payload.productId || payload._id; // cart page || product page
+
+    return addToCartApi(
+      {
+        productId,
+        name: payload.name,
+        price: payload.price,
+        image:
+          payload.image ||
+          payload.images?.[0] ||
+          "/placeholder.png",
+        quantity: -1,
+      },
+      token
     );
-  };
+  },
+  onSuccess: () =>
+    queryClient.invalidateQueries({ queryKey: ["cart"] }),
+});
 
-  // --------------------------
-  // MANUALLY UPDATE QUANTITY
-  // --------------------------
-  const updateQuantity = (productId, quantity) => {
-    if (quantity < 1) {
-      removeFromCart(productId);
-      return;
-    }
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
-    );
-  };
+//   const decrementFromCartMutation = useMutation({
+//   mutationFn: async (product) => {
+//     const token = await getToken();
+//     return addToCartApi(
+//       {
+//         productId: product._id,
+//         name: product.name,
+//         price: product.price,
+//         image: product.images?.[0] ?? "",
+//         quantity: -1, // 👈 THIS is the magic
+//       },
+//       token
+//     );
+//   },
+//   onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
+// });
 
-  // --------------------------
-  // CLEAR CART
-  // --------------------------
-  const clearCart = () => setCartItems([]);
-
-  // --------------------------
-  // CART COUNT
-  // --------------------------
-  const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+// const decrementFromCartMutation = useMutation({
+//   mutationFn: async (item) => {
+//     const token = await getToken();
+//     return addToCartApi(
+//       {
+//         productId: item.productId, // ✅ CORRECT
+//         name: item.name,
+//         price: item.price,
+//         image: item.image ?? "",
+//         quantity: -1,
+//       },
+//       token
+//     );
+//   },
+//   onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
+// });
 
   // --------------------------
   // COUPON SYSTEM (NEW)
   // --------------------------
-  const validCoupons = {
-    WELCOME10: 0.10,
-    SAVE20: 0.20,
-    MEGA30: 0.30,
-  };
 
-  const applyCoupon = (code) => {
-    const coupon = code.toUpperCase().trim();
+  const verifyCouponMutation = useMutation({
+    mutationFn: async (code) => {
+      const token = await getToken();
+      return verifyCoupon(code, token);
+    },
+  });
 
-    if (validCoupons[coupon]) {
+
+
+  // const validCoupons = {
+  //   WELCOME10: 0.05,
+  //   SAVE20: 0.20,
+  //   MEGA30: 0.30,
+  // };
+
+  const applyCoupon = async (code) => {
+  try {
+    const coupon = await verifyCouponMutation.mutateAsync(code);
+    console.log("Coupon response:", coupon);
+    
+
+    if (!coupon?.valid) { // <-- check valid
       return {
-        success: true,
-        discount: validCoupons[coupon],
-        message: `Coupon applied! You saved ${validCoupons[coupon] * 100}% 🎉`,
+        success: false,
+        discount: 0,
+        message: "Invalid coupon code ❌",
       };
     }
 
     return {
+      success: true,
+      discount: Number(coupon.discount) || 0,
+      message: coupon.message || `Coupon applied! ${Number(coupon.discount) * 100}% off`,
+    };
+  } catch (err) {
+    console.error(err);
+    return {
       success: false,
       discount: 0,
-      message: "Invalid coupon code ❌",
+      message: err.response?.data?.message || "Invalid coupon code ❌",
     };
-  };
+  }
+};
+
+
+
 
   return (
     <CartContext.Provider
       value={{
         cartItems,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        cartCount,
+        addToCart: (product) => addToCartMutation.mutate({ 
+          productId: product._id, 
+          name: product.name, 
+          price: product.price, 
+          image: product.images[0] || "/placeholder.png", 
+          quantity: 1 
+        }),
+        removeFromCart: (productId) => removeFromCartMutation.mutate(productId),
+        clearCart: () => clearCartMutation.mutate(),
+        cartCount: cartItems.reduce((acc, item) => acc + item.quantity, 0),
+        decrementFromCart: (product) => decrementFromCartMutation.mutate(product),
+
         applyCoupon, // <-- MAKE SURE THIS IS EXPORTED
       }}
     >

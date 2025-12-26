@@ -1,7 +1,5 @@
 import { useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 import { Mail, Phone, MapPin } from "lucide-react";
 
 const Contact = () => {
@@ -27,7 +25,6 @@ const Contact = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
 
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-5xl mx-auto">
@@ -151,7 +148,6 @@ const Contact = () => {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 };

@@ -1,53 +1,55 @@
 import { Eye } from "lucide-react";
 import { useState } from "react";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
+import { getOrders, updateOrderStatus } from "../../lib/api";
 
 const AdminOrders = () => {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
-  const [orders, setOrders] = useState([
-    {
-      id: 1001,
-      customer: "John Doe",
-      email: "john@example.com",
-      total: 149.99,
-      status: "pending",
-      date: "2024-03-15",
-      items: [
-        { name: "Product A", quantity: 1, price: 99.99 },
-        { name: "Product B", quantity: 2, price: 25.0 },
-      ],
-      shippingAddress: "123 Main St, City, Country",
+  // Fetch orders
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["orders"],
+    queryFn: async () => {
+      const token = await getToken();
+      return getOrders(token);
     },
-    {
-      id: 1002,
-      customer: "Jane Smith",
-      email: "jane@example.com",
-      total: 299.99,
-      status: "shipped",
-      date: "2024-03-14",
-      items: [{ name: "Product C", quantity: 1, price: 299.99 }],
-      shippingAddress: "456 Oak Ave, Town, Country",
-    },
-    {
-      id: 1003,
-      customer: "Bob Johnson",
-      email: "bob@example.com",
-      total: 89.99,
-      status: "delivered",
-      date: "2024-03-13",
-      items: [{ name: "Product D", quantity: 1, price: 89.99 }],
-      shippingAddress: "789 Pine Rd, Village, Country",
-    },
-  ]);
+  });
 
-  const handleStatusChange = (id, newStatus) => {
-    setOrders((prev) =>
-      prev.map((order) => (order.id === id ? { ...order, status: newStatus } : order))
-    );
+  const orders = data?.orders || [];
 
-    toast.success(`Order #${id} status changed to ${newStatus}.`);
+  // Mutation to update status and isPaid
+ const mutation = useMutation({
+  mutationFn: async ({ id, status, isPaid }) => {
+    const token = await getToken();
+    return updateOrderStatus(id, status, isPaid, token);
+  },
+  onSuccess: (_, { id, status, isPaid }) => {
+    toast.success(`Order #${id} updated to ${status}`);
+    // Update cache manually
+    queryClient.setQueryData(["orders"], (oldData) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        orders: oldData.orders.map((order) =>
+          order._id === id ? { ...order, status, isPaid } : order
+        ),
+      };
+    });
+  },
+  onError: () => {
+    toast.error("Failed to update order status.");
+  },
+});
+
+
+  const handleStatusChange = (order, newStatus, newIsPaid) => {
+    mutation.mutate({ id: order._id, status: newStatus, isPaid: newIsPaid });
   };
 
   const viewOrderDetails = (order) => {
@@ -55,177 +57,134 @@ const AdminOrders = () => {
     setIsViewOpen(true);
   };
 
+  if (isLoading) return <p className="p-6 text-center">Loading orders...</p>;
+  if (isError) return <p className="p-6 text-center text-red-500">Failed to load orders.</p>;
+
   return (
-    <div className="w-full min-h-screen p-6 bg-gray-50">
-      {/* PAGE TITLE */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Manage Orders</h1>
-        <p className="text-gray-500">View and manage customer orders.</p>
-      </div>
+   <div className="w-full min-h-screen p-4 sm:p-6 bg-gray-50 overflow-x-hidden">
+  <div className="mb-6">
+    <h1 className="text-2xl sm:text-3xl font-bold">Manage Orders</h1>
+    <p className="text-gray-500 text-sm sm:text-base">View and manage customer orders.</p>
+  </div>
 
-      {/* TABLE */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className=" border-gray-500 bg-gray-100 text-left">
-              <th className="p-3">Order ID</th>
-              <th className="p-3">Customer</th>
-              <th className="p-3">Date</th>
-              <th className="p-3">Total</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Change Status</th>
-              <th className="p-3 text-right">Details</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="p-3 font-semibold">#{order.id}</td>
-
-                <td className="p-3">
-                  <p className="font-medium">{order.customer}</p>
-                  <p className="text-xs text-gray-500">{order.email}</p>
-                </td>
-
-                <td className="p-3">{order.date}</td>
-
-                <td className="p-3">${order.total.toFixed(2)}</td>
-
-                <td className="p-3">
-                  <span
-                    className={`px-2 py-1  rounded-full text-xs font-medium capitalize
-                    ${
-                      order.status === "pending"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : order.status === "shipped"
-                        ? "bg-blue-100 text-blue-700"
-                        : order.status === "delivered"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </td>
-
-                <td className="p-3">
-                  <select
-                    value={order.status}
-                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    className="border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </td>
-
-                <td className="p-3 text-right">
-                  <button
-                    onClick={() => viewOrderDetails(order)}
-                    className="text-primary hover:underline text-sm"
-                  >
-               <Eye className="w-5 h-5" />
-
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* VIEW MODAL */}
-      {isViewOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
-                Order Details — #{selectedOrder.id}
-              </h2>
-              <button
-                className="text-red-600 hover:text-black"
-                onClick={() => setIsViewOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* DETAILS */}
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Customer Information</h3>
-                  <p className="text-sm"><b>Name:</b> {selectedOrder.customer}</p>
-                  <p className="text-sm"><b>Email:</b> {selectedOrder.email}</p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold mb-2">Order Information</h3>
-                  <p className="text-sm"><b>Date:</b> {selectedOrder.date}</p>
-                  <p className="text-sm"><b>Status:</b> {selectedOrder.status}</p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Shipping Address</h3>
-                <p className="text-sm text-gray-600">{selectedOrder.shippingAddress}</p>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-3">Order Items</h3>
-
-                <table className="w-full border border-gray-200 rounded-lg">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="p-2 text-left">Product</th>
-                      <th className="p-2">Qty</th>
-                      <th className="p-2 text-right">Price</th>
-                      <th className="p-2 text-right">Subtotal</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {selectedOrder.items.map((item, idx) => (
-                      <tr key={idx} className="border-t border-gray-200">
-                        <td className="p-2">{item.name}</td>
-                        <td className="p-2 text-center">{item.quantity}</td>
-                        <td className="p-2 text-right">${item.price.toFixed(2)}</td>
-                        <td className="p-2 text-right">
-                          ${(item.quantity * item.price).toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-
-                    <tr className="border-t border-gray-200 font-semibold">
-                      <td colSpan={3} className="p-2 text-right">
-                        Total:
-                      </td>
-                      <td className="p-2 text-right">
-                        ${selectedOrder.total.toFixed(2)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* CLOSE BUTTON */}
-              <div className="text-right">
-                <button
-                  onClick={() => setIsViewOpen(false)}
-                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-black"
+  {/* Table Container */}
+  <div className="bg-white p-2 sm:p-6 rounded-xl shadow-sm border border-gray-200 -mx-4 sm:mx-0 overflow-x-auto min-w-0">
+    <table className="w-full table-auto border-collapse border border-gray-300 min-w-full">
+      <thead className="bg-gray-100">
+        <tr>
+          <th className="p-2 border border-gray-300 text-left text-xs sm:text-sm">Username</th>
+          <th className="p-2 border border-gray-300 text-left text-xs sm:text-sm">Total</th>
+          <th className="p-2 border border-gray-300 text-left text-xs sm:text-sm">Status</th>
+          <th className="p-2 border border-gray-300 text-left text-xs sm:text-sm">Paid?</th>
+          <th className="p-2 border border-gray-300 text-left text-xs sm:text-sm">Change Status</th>
+          <th className="p-2 border border-gray-300 text-right text-xs sm:text-sm">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {orders.map((order) => (
+          <tr key={order._id} className="border-b border-gray-200 hover:bg-gray-50">
+            <td className="p-2 border border-gray-300 text-xs sm:text-sm">{order.userId?.name || order.userId}</td>
+            <td className="p-2 border border-gray-300 text-xs sm:text-sm">${order.total?.toFixed(2)}</td>
+            <td className="p-2 border border-gray-300 text-xs sm:text-sm">{order.status}</td>
+            <td className="p-2 border border-gray-300 text-xs sm:text-sm">{order.isPaid ? "Yes" : "No"}</td>
+            <td className="p-2 border border-gray-300">
+              <div className="flex flex-col sm:flex-row sm:gap-2">
+                <select
+                  value={order.status}
+                  onChange={(e) => handleStatusChange(order, e.target.value, order.isPaid)}
+                  className="border border-gray-300 rounded-lg px-2 py-1 text-xs sm:text-sm w-full sm:w-auto bg-white hover:border-gray-400"
                 >
-                  Close
-                </button>
+                  <option value="ORDER_PLACED">ORDER_PLACED</option>
+                  <option value="SHIPPED">SHIPPED</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+
+                <select
+                  value={order.isPaid ? "true" : "false"}
+                  onChange={(e) => handleStatusChange(order, order.status, e.target.value === "true")}
+                  className="border border-gray-300 rounded-lg px-2 py-1 text-xs sm:text-sm w-full sm:w-auto bg-white hover:border-gray-400"
+                >
+                  <option value="true">Paid</option>
+                  <option value="false">Unpaid</option>
+                </select>
               </div>
-            </div>
+            </td>
+            <td className="p-2 border border-gray-300 text-right">
+              <button
+                onClick={() => viewOrderDetails(order)}
+                className="text-primary hover:underline text-sm sm:text-base"
+              >
+                <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {/* VIEW MODAL */}
+  {isViewOpen && selectedOrder && (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 overflow-x-hidden">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-lg sm:max-w-3xl p-4 sm:p-6 overflow-auto max-h-[90vh]">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg sm:text-xl font-bold">Order Details — #{selectedOrder._id}</h2>
+          <button
+            className="text-red-600 hover:text-black"
+            onClick={() => setIsViewOpen(false)}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-2 sm:space-y-4 text-xs sm:text-sm">
+          <p><b>Username:</b> {selectedOrder.userId?.name || "Unknown"}</p>
+          <p><b>Total:</b> ${selectedOrder.total?.toFixed(2)}</p>
+          <p><b>Status:</b> {selectedOrder.status}</p>
+          <p><b>Paid:</b> {selectedOrder.isPaid ? "Yes" : "No"}</p>
+          <p><b>Payment Method:</b> {selectedOrder.paymentMethod}</p>
+          <p><b>Address ID:</b> {selectedOrder.addressId}</p>
+
+          <h3 className="font-semibold mt-2 sm:mt-4">Order Items:</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto border border-gray-200 min-w-[500px]">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-1 sm:p-2 border border-gray-300 text-left">Product</th>
+                  <th className="p-1 sm:p-2 border border-gray-300 text-center">Qty</th>
+                  <th className="p-1 sm:p-2 border border-gray-300 text-right">Price</th>
+                  <th className="p-1 sm:p-2 border border-gray-300 text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedOrder.orderItems?.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="p-1 sm:p-2 border border-gray-300">{item.productId?.name || "Unknown"}</td>
+                    <td className="p-1 sm:p-2 border border-gray-300 text-center">{item.quantity}</td>
+                    <td className="p-1 sm:p-2 border border-gray-300 text-right">${item.price.toFixed(2)}</td>
+                    <td className="p-1 sm:p-2 border border-gray-300 text-right">${(item.quantity * item.price).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-right mt-2 sm:mt-4">
+            <button
+              onClick={() => setIsViewOpen(false)}
+              className="px-3 sm:px-4 py-1 sm:py-2 bg-primary text-white rounded-lg hover:bg-black"
+            >
+              Close
+            </button>
           </div>
         </div>
-      )}
-      <Toaster position="top-right" />
+      </div>
     </div>
+  )}
+</div>
+
+
   );
 };
 

@@ -1,40 +1,162 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
 import { useCart } from "../contexts/CartContext";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { addAddress, getUserAddresses } from "../lib/api";
+import { useAuth } from "@clerk/clerk-react";
+import { axiosInstance } from "../lib/axios";
 
 const Checkout = () => {
   const { cartItems, applyCoupon, clearCart } = useCart();
   const [couponCode, setCouponCode] = useState("");
   const [discount, setDiscount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [addressesState, setAddressesState] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [showAddressModal, setShowAddressModal] = useState(false);
+
+  const [newAddress, setNewAddress] = useState({
+  name: "",
+  email: "",
+  street: "",
+  city: "",
+  state: "",
+  zip: "",
+  country: "Nigeria",
+  phone: "",
+});
+
+
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  // Fetch user addresses
+  const { data } = useQuery({
+    queryKey: ["addresses"],
+    queryFn: async () => {
+      const token = await getToken();
+      return getUserAddresses(token);
+    },
+  });
+
+useEffect(() => {
+  if (data?.length > 0) {
+    setAddressesState(data);
+  }
+}, [data]);
+
+// useEffect(() => {
+//   console.log("Fetched addresses:", data);
+// }, [data]);
+
+  // Mutation for adding a new address
+  const { mutate: createAddress, isLoading } = useMutation({
+    mutationFn: addAddress,
+    onSuccess: () => {
+      toast.success("Address added successfully");
+      queryClient.invalidateQueries(["addresses"]);
+      setShowAddressModal(false);
+      setNewAddress({
+      name: "",
+      email: "",
+      street: "",
+      city: "",
+      state: "",
+      zip: "",
+      country: "Nigeria",
+      phone: "",
+    });
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "An error occurred");
+      console.error("Add Address Error:", error);
+    },
+  });
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const discountAmount = subtotal * discount;
-  const total = subtotal - discountAmount;
+  const discountAmount = subtotal * (discount || 0); // <- safe fallback
+const total = subtotal - discountAmount;
 
-  const handleApplyCoupon = () => {
-    const result = applyCoupon(couponCode);
-    if (result.success) {
-      setDiscount(result.discount);
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
+
+const handleApplyCoupon = async () => {
+  const result = await applyCoupon(couponCode);
+  console.log("Discount state:", couponCode);
+
+  if (result.success) {
+    setDiscount(result.discount);
+    toast.success(result.message);
+  } else {
+    toast.error(result.message);
+  }
+};
+
+const { mutateAsync: placeOrder, isLoading: isOrdering } = useMutation({
+  mutationFn: async () => {
+    if (!selectedAddressId) throw new Error("Please select a delivery address");
+
+    const token = await getToken();
+
+    // Map cartItems to the format the backend expects
+    const orderItems = cartItems.map(item => ({
+      id: item.productId || item._id, // make sure this is the actual product _id
+      quantity: item.quantity
+    }));
+    console.log("Order items being sent to backend:", orderItems);
+
+    // Safety check
+    orderItems.forEach(item => {
+      if (!item.id) {
+        throw new Error(`Product ID is missing for one of the cart items`);
+      }
+    });
+
+    console.log("Sending order items:", orderItems); // debug log
+
+    const res = await axiosInstance.post(
+      "/order/place-order",
+      {
+        items: orderItems,
+        addressId: selectedAddressId,
+        paymentMethod,
+        couponCode: couponCode || null,
+        discount,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (paymentMethod === 'STRIPE') {
+      const session = res.data.session;
+      if (!session?.url) throw new Error("Stripe session not found");
+      window.location.href = session.url; // redirect immediately
+      
+    }else { toast.success(res.data.message); navigate('/orders'); }
+
+    return res.data;
+  },
+});
+
+
+const handleCheckout = async (e) => {
+  e.preventDefault();
+
+  try {
+    const order = await placeOrder();
+    if (paymentMethod === "COD") {
+      toast.success("Order placed successfully! 🎉");
+      clearCart(); // clear after successful order
+      navigate(`/orders`);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error(err.response?.data?.error || err.message || "Failed to place order");
+  }
+};
 
-  const handleCheckout = (e) => {
-    e.preventDefault();
-    clearCart();
-    toast.success("Order Placed! Thank you for your purchase.");
-    navigate("/");
-  };
 
   if (cartItems.length === 0) {
     navigate("/cart");
@@ -43,9 +165,6 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <Toaster position="top-right" />
-
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold mb-8">Checkout</h1>
 
@@ -53,69 +172,40 @@ const Checkout = () => {
           {/* LEFT */}
           <div className="lg:col-span-2">
             <form onSubmit={handleCheckout} className="space-y-6">
-
               {/* SHIPPING CARD */}
               <div className="bg-white rounded-xl border border-gray-300 p-6">
                 <h2 className="text-2xl font-bold mb-6">Shipping Information</h2>
 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="font-medium">First Name</label>
-                    <input
-                      required
-                      className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-medium">Last Name</label>
-                    <input
-                      required
-                      className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                    />
-                  </div>
-                </div>
-
+                {/* Address Dropdown */}
                 <div className="mt-4">
-                  <label className="font-medium">Email</label>
-                  <input
-                    type="email"
-                    required
-                    className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                  />
-                </div>
+                  <label className="font-medium">Delivery Address</label>
+                  <div className="flex gap-2 mt-2">
+                <select
+                  value={selectedAddressId}
+                  onChange={(e) => setSelectedAddressId(e.target.value)}
+                  disabled={addressesState.length === 0}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 disabled:bg-gray-100"
+                  required
+                >
+                  <option value="" disabled>
+                    {addressesState.length === 0
+                      ? "No saved addresses"
+                      : "Select delivery address"}
+                  </option>
 
-                <div className="mt-4">
-                  <label className="font-medium">Address</label>
-                  <input
-                    required
-                    className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                  />
-                </div>
-
-                <div className="grid md:grid-cols-3 gap-4 mt-4">
-                  <div>
-                    <label className="font-medium">City</label>
-                    <input
-                      required
-                      className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-medium">State</label>
-                    <input
-                      required
-                      className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="font-medium">ZIP Code</label>
-                    <input
-                      required
-                      className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                    />
+                  {addressesState.map((addr) => (
+                    <option key={addr._id} value={addr._id}>
+                      {addr.name} — {addr.street}, {addr.city}, {addr.state}, {addr.country}
+                    </option>
+                  ))}
+                </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddressModal(true)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      ➕
+                    </button>
                   </div>
                 </div>
               </div>
@@ -123,36 +213,33 @@ const Checkout = () => {
               {/* PAYMENT CARD */}
               <div className="bg-white rounded-xl border border-gray-300 p-6">
                 <h2 className="text-2xl font-bold mb-6">Payment Information</h2>
-
                 <label className="font-medium">Payment Method</label>
                 <div className="mt-3 space-y-3">
                   <div
                     className="flex items-center gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100"
-                    onClick={() => setPaymentMethod("cod")}
+                    onClick={() => setPaymentMethod("COD")}
                   >
                     <input
                       type="radio"
                       name="payment"
-                      checked={paymentMethod === "cod"}
-                      onChange={() => setPaymentMethod("cod")}
+                      checked={paymentMethod === "COD"}
+                      onChange={() => setPaymentMethod("COD")}
                     />
                     <div>
                       <div className="font-semibold">Cash on Delivery</div>
-                      <div className="text-sm text-gray-500">
-                        Pay on delivery
-                      </div>
+                      <div className="text-sm text-gray-500">Pay on delivery</div>
                     </div>
                   </div>
 
                   <div
                     className="flex items-center gap-3 p-4 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100"
-                    onClick={() => setPaymentMethod("stripe")}
+                    onClick={() => setPaymentMethod("STRIPE")}
                   >
                     <input
                       type="radio"
                       name="payment"
-                      checked={paymentMethod === "stripe"}
-                      onChange={() => setPaymentMethod("stripe")}
+                      checked={paymentMethod === "STRIPE"}
+                      onChange={() => setPaymentMethod("STRIPE")}
                     />
                     <div>
                       <div className="font-semibold">Card Payment</div>
@@ -162,47 +249,23 @@ const Checkout = () => {
                     </div>
                   </div>
                 </div>
-
-                {paymentMethod === "stripe" && (
-                  <div className="mt-6 space-y-4">
-                    <div>
-                      <label className="font-medium">Card Number</label>
-                      <input
-                        placeholder="1234 5678 9012 3456"
-                        required
-                        className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                      />
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="md:col-span-2">
-                        <label className="font-medium">Expiry</label>
-                        <input
-                          placeholder="MM/YY"
-                          required
-                          className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="font-medium">CVV</label>
-                        <input
-                          placeholder="123"
-                          required
-                          className="mt-2 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-gray-300"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <button
-                type="submit"
-                className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:brightness-90"
-              >
-                Place Order - ₦{total.toLocaleString()}
-              </button>
+                  type="submit"
+                  className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:brightness-90 flex items-center justify-center gap-2"
+                  disabled={isOrdering}
+                >
+                  {isOrdering ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      Placing Order...
+                    </>
+                  ) : (
+                    `Place Order - ₦${total.toLocaleString()}`
+                  )}
+            </button>
+
             </form>
           </div>
 
@@ -243,44 +306,110 @@ const Checkout = () => {
                     Apply
                   </button>
                 </div>
-
-                <p className="text-xs text-gray-500 mt-2">
-                  Try: WELCOME10, SAVE20, MEGA30
-                </p>
-              </div>
-
-              <div className="space-y-3 border-t pt-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Subtotal</span>
-                  <span>₦{subtotal.toLocaleString()}</span>
-                </div>
-
-                {discount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount ({discount * 100}%)</span>
-                    <span>- ₦{discountAmount.toLocaleString()}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Shipping</span>
-                  <span>Free</span>
-                </div>
-
-                <div className="border-t pt-3">
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span className="text-primary">₦{total.toLocaleString()}</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
-      <Footer />
+      {/* Address Modal */}
+      {showAddressModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add New Address</h2>
+
+            <div className="space-y-4">
+              <input
+                placeholder="Full Name"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={newAddress.name}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, name: e.target.value })
+                }
+              />
+
+              <input
+                placeholder="Email"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={newAddress.email}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, email: e.target.value })
+                }
+              />
+
+              <input
+                placeholder="Street"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={newAddress.street}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, street: e.target.value })
+                }
+              />
+
+              <input
+                placeholder="City"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={newAddress.city}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, city: e.target.value })
+                }
+              />
+
+              <input
+                placeholder="State"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={newAddress.state}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, state: e.target.value })
+                }
+              />
+
+              <input
+                placeholder="ZIP Code"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={newAddress.zip}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, zip: e.target.value })
+                }
+              />
+
+              <input
+                placeholder="Phone Number"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                value={newAddress.phone}
+                onChange={(e) =>
+                  setNewAddress({ ...newAddress, phone: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowAddressModal(false)}
+                className="px-4 py-2 border rounded-lg"
+              >
+                Cancel
+              </button>
+
+             <button
+              onClick={async () => {
+                const token = await getToken();
+
+                createAddress({
+                  token,
+                  address: newAddress,
+                });
+              }}
+  disabled={isLoading}
+  className="px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
+>
+  {isLoading ? "Saving..." : "Save Address"}
+</button>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

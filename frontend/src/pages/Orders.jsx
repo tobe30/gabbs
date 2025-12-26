@@ -1,82 +1,86 @@
 import React, { useState } from "react";
 import { Package, MapPin, Calendar, DollarSign, Eye, X } from "lucide-react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
+import { getUserOrders } from "../lib/api";
+import { axiosInstance } from "../lib/axios";
 
 const Orders = () => {
   // mock orders in state so we can update / interact
-  const [orders, setOrders] = useState([
-    {
-      id: "ORD-001",
-      date: "2024-11-25",
-      total: 729.97,
-      status: "delivered",
-      items: [
-        {
-          name: "Premium Wireless Headphones",
-          quantity: 1,
-          price: 299.99,
-          image:
-            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop",
-        },
-        {
-          name: "Smart Watch Pro",
-          quantity: 1,
-          price: 399.99,
-          image:
-            "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop",
-        },
-        {
-          name: "Stainless Steel Water Bottle",
-          quantity: 1,
-          price: 29.99,
-          image:
-            "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "123 Main St, City, State 12345",
-      paymentMethod: "Credit Card",
-    },
-    {
-      id: "ORD-002",
-      date: "2024-11-20",
-      total: 159.99,
-      status: "shipped",
-      items: [
-        {
-          name: "Leather Messenger Bag",
-          quantity: 1,
-          price: 159.99,
-          image:
-            "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "456 Oak Ave, Town, State 67890",
-      paymentMethod: "Cash on Delivery",
-    },
-    {
-      id: "ORD-003",
-      date: "2024-11-15",
-      total: 449.99,
-      status: "pending",
-      items: [
-        {
-          name: "Ergonomic Office Chair",
-          quantity: 1,
-          price: 449.99,
-          image:
-            "https://images.unsplash.com/photo-1580480055273-228ff5388ef8?w=400&h=400&fit=crop",
-        },
-      ],
-      shippingAddress: "789 Pine Rd, Village, State 11223",
-      paymentMethod: "Credit Card",
-    },
-  ]);
-
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [ratingProduct, setRatingProduct] = useState(null);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  // const [ratedProducts, setRatedProducts] = useState({});
 
+
+  const { getToken } = useAuth();
+
+ // get orders 
+const { data, isLoading, isError  } = useQuery({
+     queryKey: ["order"],
+     queryFn: async () => {
+       const token = await getToken();
+       return getUserOrders(token);
+     },
+   });
+
+  const orders = data?.orders || [];
+  // console.log("eme", orders)
+
+
+  const queryClient = useQueryClient();
+// add rating
+const rateProductMutation = useMutation({
+  mutationFn: async ({ orderId, productId, rating, review }) => {
+    const token = await getToken();
+
+    const { data } = await axiosInstance.post(
+      "/ratings/add-rating",
+      {
+        orderId,
+        productId,
+        rating,
+        review,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return data;
+  },
+onSuccess: () => {
+  toast.success("Rating submitted 🎉");
+  setIsRatingOpen(false);
+  setRatingValue(0);
+  setReviewText("");
+
+  queryClient.invalidateQueries({ queryKey: ["ratings"] });
+},
+
+
+  onError: (error) => {
+    toast.error(
+      error?.response?.data?.error || "Failed to submit rating"
+    );
+  },
+});
+
+
+const handleSubmitRating = () => {
+  rateProductMutation.mutate({
+    orderId: ratingProduct.orderId,
+    productId: ratingProduct.productId,
+    rating: ratingValue,
+    review: reviewText || "No review provided",
+  });
+};
 
   const getStatusClasses = (status) => {
     switch (status) {
@@ -103,17 +107,35 @@ const Orders = () => {
     setIsDialogOpen(false);
   };
 
-  const handleChangeStatus = (orderId, newStatus) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-    );
-    toast.success(`Order ${orderId} status updated to "${newStatus}"`);
-  };
+
+  const { data: ratingsData } = useQuery({
+  queryKey: ["ratings"],
+  queryFn: async () => {
+    const token = await getToken();
+    const res = await axiosInstance.get("/ratings", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res.data;
+  },
+});
+const ratedMap = {};
+
+ratingsData?.ratings?.forEach((r) => {
+  ratedMap[`${r.orderId}_${r.productId}`] = r.rating;
+});
+
+
+  // const handleChangeStatus = (orderId, newStatus) => {
+  //   setOrders((prev) =>
+  //     prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+  //   );
+  //   toast.success(`Order ${orderId} status updated to "${newStatus}"`);
+  // };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-right" />
-      <Navbar />
 
       <main className="container mx-auto px-4 py-12">
         <div className="mb-8">
@@ -121,7 +143,13 @@ const Orders = () => {
           <p className="text-gray-600">Track and manage your orders</p>
         </div>
 
-        {orders.length === 0 ? (
+        {isLoading ? (
+  <div className="rounded-lg bg-white shadow p-8 text-center">
+    <span className="loading loading-spinner loading-lg"></span>
+    <p className="mt-4 text-gray-500">Loading your orders…</p>
+  </div>
+
+        ): orders.length === 0 ? (
           <div className="rounded-lg bg-white shadow p-8 text-center">
             <Package className="mx-auto text-gray-400" size={48} />
             <h3 className="text-xl font-semibold mt-4">No orders yet</h3>
@@ -154,14 +182,14 @@ const Orders = () => {
                       <div className="flex items-center gap-2">
                         <h2 className="text-lg font-semibold">Order #{order.id}</h2>
                         <span className="text-sm text-gray-500">
-                          • {new Date(order.date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                          • {new Date(order.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                         </span>
                       </div>
 
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-600">
                         <div className="flex items-center gap-2">
                           <MapPin className="text-gray-400" />
-                          <span className="truncate max-w-xs">{order.shippingAddress}</span>
+                          <span className="truncate max-w-xs">{order.addressId.street}</span>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -177,7 +205,7 @@ const Orders = () => {
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </div>
 
-                    <div className="text-2xl font-bold text-gray-900">${order.total.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-gray-900">₦{order.total.toLocaleString()}</div>
 
                     <div className="flex items-center gap-2">
 
@@ -197,26 +225,56 @@ const Orders = () => {
                 {/* items preview */}
                 <div className="px-6 pb-4">
                   <div className="flex gap-4 overflow-x-auto py-2">
-                    {order.items.slice(0, 4).map((item, idx) => (
+                    {order.orderItems.slice(0, 4).map((item, idx) => (
                       <div key={idx} className="flex items-center gap-3 min-w-[220px]">
-                        <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-md border border-gray-200" />
+                        <img src={item.productId.images?.[0] || "/placeholder.png"} alt={item.productId.name} className="w-16 h-16 object-cover rounded-md border border-gray-200" />
                         <div>
-                          <p className="font-medium text-sm line-clamp-1">{item.name}</p>
+                          <p className="font-medium text-sm line-clamp-1">{item.productId.name}</p>
                           <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                         </div>
+                       {(order.status === "COMPLETED" || order.status === "SHIPPED") && (
+                      ratedMap[`${order._id}_${item.productId._id}`] ? (
+                        <div className="mt-2 flex text-yellow-400 text-xl">
+                          {Array.from({
+                            length: ratedMap[`${order._id}_${item.productId._id}`],
+                          }).map((_, i) => (
+                            <span key={i}>★</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setRatingProduct({
+                              productId: item.productId._id,
+                              orderId: order._id,
+                              name: item.productId.name,
+                            });
+                            setIsRatingOpen(true);
+                          }}
+                          className="mt-2 text-sm text-primary font-semibold hover:underline"
+                        >
+                          ⭐ Rate product
+                        </button>
+                      )
+                    )}
+
+
                       </div>
                     ))}
 
-                    {order.items.length > 4 && (
-                      <div className="flex items-center text-sm text-gray-500">
-                        +{order.items.length - 4} more item(s)
-                      </div>
-                    )}
+                    {order.orderItems.length > 4 && (
+                          <div className="flex items-center text-sm text-gray-500">
+                            +{order.orderItems.length - 4} more item(s)
+                          </div>
+                        )}
+
                   </div>
                 </div>
+                
               </div>
             ))}
           </div>
+          
         )}
       </main>
 
@@ -258,16 +316,16 @@ const Orders = () => {
               <div>
                 <h4 className="font-semibold mb-3">Items</h4>
                 <div className="space-y-4">
-                  {selectedOrder.items.map((item, idx) => (
+                  {selectedOrder.orderItems.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-4">
-                      <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-md border border-gray-300" />
+                      <img src={item.productId.images?.[0] || "/placeholder.png"} alt={item.productId.name} className="w-20 h-20 object-cover rounded-md border border-gray-300" />
                       <div className="flex-1">
-                        <p className="font-medium">{item.name}</p>
+                        <p className="font-medium">{item.productId.name}</p>
                         <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
-                        <p className="text-sm font-semibold mt-1">${item.price.toFixed(2)}</p>
+                        <p className="text-sm font-semibold mt-1">₦{(item.productId.price * item.quantity).toLocaleString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">${(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="font-bold">₦{(item.productId.price * item.quantity).toLocaleString()}</p>
                       </div>
                     </div>
                   ))}
@@ -276,7 +334,7 @@ const Orders = () => {
 
               <div className="border-t border-gray-200 pt-4">
                 <h4 className="font-semibold mb-2">Shipping Address</h4>
-                <p className="text-gray-700">{selectedOrder.shippingAddress}</p>
+                <p className="text-gray-700">{selectedOrder.addressId.street}</p>
               </div>
 
               <div className="border-t border-gray-200 pt-4">
@@ -286,7 +344,7 @@ const Orders = () => {
 
               <div className="border-t border-gray-200 pt-4 flex items-center justify-between">
                 <div className="text-sm text-gray-600">Total</div>
-                <div className="text-2xl font-bold text-gray-900">${selectedOrder.total.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-gray-900">₦{selectedOrder.total.toLocaleString()}</div>
               </div>
 
               
@@ -295,7 +353,65 @@ const Orders = () => {
         </div>
       )}
 
-      <Footer />
+      {isRatingOpen && ratingProduct && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="absolute inset-0 bg-black/50"
+      onClick={() => setIsRatingOpen(false)}
+    />
+
+    <div className="relative bg-white w-full max-w-md rounded-xl p-6">
+      <h3 className="text-lg font-semibold mb-4">
+        Rate {ratingProduct.name}
+      </h3>
+
+      {/* Stars */}
+      <div className="flex gap-2 mb-4">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            onClick={() => setRatingValue(star)}
+            className={`text-2xl ${
+              star <= ratingValue ? "text-yellow-400" : "text-gray-300"
+            }`}
+          >
+            ★
+          </button>
+        ))}
+      </div>
+
+      {/* Review */}
+      <textarea
+        className="w-full border rounded-lg p-3 text-sm"
+        rows="4"
+        placeholder="Write a review (optional)"
+        value={reviewText}
+        onChange={(e) => setReviewText(e.target.value)}
+      />
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3 mt-4">
+        <button
+          onClick={() => setIsRatingOpen(false)}
+          className="px-4 py-2 text-sm border rounded-lg"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleSubmitRating}
+          className="px-4 py-2 text-sm bg-primary text-white rounded-lg"
+          disabled={ratingValue === 0}
+        >
+          Submit Rating
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+      
     </div>
   );
 };

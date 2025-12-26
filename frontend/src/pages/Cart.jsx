@@ -1,18 +1,17 @@
 import { Link } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+
 import { useCart } from "../contexts/CartContext";
 import { Trash2, Plus, Minus } from "lucide-react";
 
 const Cart = () => {
-  const { cartItems, removeFromCart, updateQuantity } = useCart();
+  const { cartItems, removeFromCart, decrementFromCart,  addToCart} = useCart();
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
+       
         <div className="container mx-auto px-4 py-20 text-center">
           <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
           <p className="text-muted-foreground mb-8">Add some products to get started</p>
@@ -22,14 +21,13 @@ const Cart = () => {
             </button>
           </Link>
         </div>
-        <Footer />
+       
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
 
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold mb-8">Shopping Cart</h1>
@@ -38,7 +36,7 @@ const Cart = () => {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => (
               <div
-                key={item.id}
+                key={item.productId}
                 className="bg-card rounded-xl border border-border p-4 flex gap-4"
               >
                 <img
@@ -54,7 +52,9 @@ const Cart = () => {
 
                 <div className="flex flex-col items-end justify-between">
                   <button
-                    onClick={() => removeFromCart(item.id)}
+                    key={item.productId}
+                    onClick={() => removeFromCart(item.productId)}
+
                     className="text-destructive hover:text-destructive/80"
                   >
                     <Trash2 className="h-5 w-5" />
@@ -62,14 +62,22 @@ const Cart = () => {
 
                   <div className="flex items-center gap-2 bg-primary text-white rounded-lg p-1">
                     <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                       onClick={() => decrementFromCart(item)}
                       className="p-1 hover:bg-background rounded"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
                     <span className="w-8 text-center font-medium">{item.quantity}</span>
                     <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      onClick={() =>
+                        addToCart({
+                          _id: item.productId,
+                          name: item.name,
+                          price: item.price,
+                          images: [item.image],
+                        })
+                      }
+
                       className="p-1 hover:bg-background rounded"
                     >
                       <Plus className="h-4 w-4" />
@@ -117,7 +125,6 @@ const Cart = () => {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 };
