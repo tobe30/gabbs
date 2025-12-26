@@ -78,18 +78,39 @@ export const stripeWebhook = async (req, res) => {
   }
 
   try {
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const { orderId, userId, appId } = session.metadata;
+    switch (event.type) {
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object;
+        const { orderId, userId, appId } = paymentIntent.metadata || {};
 
-      if (appId !== "gabbs") return res.json({ received: true });
+        if (appId !== "gabbs") break;
 
-      await Order.findByIdAndUpdate(orderId, { isPaid: true, paymentStatus: "PAID" });
-      await User.findByIdAndUpdate(userId, { cart: [] });
+        await Order.findByIdAndUpdate(orderId, {
+          isPaid: true,
+          paymentStatus: "PAID",
+        });
 
-      console.log("✅ Order paid & cart cleared");
-    } else {
-      console.log("Unhandled event:", event.type);
+        await User.findByIdAndUpdate(userId, { cart: [] });
+
+        console.log("✅ Order paid & cart cleared via PaymentIntent");
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const paymentIntent = event.data.object;
+        const { orderId } = paymentIntent.metadata || {};
+
+        await Order.findByIdAndUpdate(orderId, {
+          isPaid: false,
+          paymentStatus: "CANCELED",
+        });
+
+        console.log("❌ Payment canceled for order", orderId);
+        break;
+      }
+
+      default:
+        console.log("Unhandled event:", event.type);
     }
 
     res.json({ received: true });
@@ -98,6 +119,7 @@ export const stripeWebhook = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 export const config = {
     api: {bodyparser: false }
