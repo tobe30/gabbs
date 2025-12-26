@@ -5,12 +5,26 @@ import { connectDB } from './lib/db.js';
 import { clerkMiddleware, requireAuth } from '@clerk/express'
 import productRoutes from './routes/product.routes.js';
 import userRoutes from './routes/user.routes.js';
+import couponRoutes from './routes/coupon.routes.js';
 import { clerkWebhooks } from './controllers/webhooks.js';
+import connectCloudinary from './lib/cloudinary.js';
+import cartRoutes from './routes/cart.routes.js';
+import orderRoutes from './routes/order.routes.js';
+import addressRoutes from './routes/address.routes.js';
+import ratingRoutes from './routes/rating.routes.js';
+import dashboardRoutes from './routes/dashboard.route.js';
+
+
 
 const app = express();
 await connectDB()
+await connectCloudinary();
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173', // your frontend URL
+    credentials: true,
+}));
+
 app.use(clerkMiddleware());// Clerk middleware to handle authentication
 
 //routes
@@ -22,6 +36,16 @@ app.use(express.json());// To parse JSON request bodies
 app.post('/clerk', express.json(), clerkWebhooks)
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/order', orderRoutes);
+app.use('/api/address', addressRoutes);
+app.use('/api/ratings', ratingRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+
+
+
 
 //port 
 const PORT = process.env.PORT || 5000;

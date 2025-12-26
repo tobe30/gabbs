@@ -8,9 +8,19 @@ const userSchema = new mongoose.Schema(
     imageUrl: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
 
+    cart: [
+      {
+        productId: { type: String, required: true },
+        name: String,
+        price: Number,
+        image: String,
+        quantity: { type: Number, default: 1 }
+      }
+    ]
   },
   { timestamps: true }
 );
+
 
 const User = mongoose.model("User", userSchema);
 

@@ -1,5 +1,7 @@
 import User from "../models/User.js";
 import { Webhook } from "svix"; // or your webhook library
+import Stripe from "stripe";
+import Order from "../models/Order.js";
 
 export const clerkWebhooks = async (req, res) => {
   try {
@@ -54,3 +56,68 @@ export const clerkWebhooks = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export const stripeWebhook = async (req, res) => {
+  const sig = req.headers["stripe-signature"];
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("Webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+
+        const { orderId, userId, appId } = session.metadata;
+
+        if (appId !== "gabbs") {
+          return res.json({ received: true });
+        }
+
+        // ✅ mark order as paid
+        await Order.findByIdAndUpdate(orderId, {
+          isPaid: true,
+          paymentStatus: "PAID",
+        });
+
+        // ✅ clear user cart
+        await User.findByIdAndUpdate(userId, {
+          cart: [],
+        });
+
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        console.log("Payment failed");
+        break;
+      }
+
+      default:
+        console.log("Unhandled event:", event.type);
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+export const config = {
+    api: {bodyparser: false }
+}
