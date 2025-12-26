@@ -58,13 +58,10 @@ export const clerkWebhooks = async (req, res) => {
 };
 
 
-
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const stripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
-
   let event;
 
   try {
@@ -74,19 +71,18 @@ export const stripeWebhook = async (req, res) => {
       process.env.STRIPE_WEBHOOK_SECRET
     );
 
-    console.log("Stripe webhook triggered:", event.type);
-
+    console.log("🔥 Stripe webhook triggered:", event.type);
   } catch (err) {
-    console.error("Webhook signature failed:", err.message);
+    console.error("❌ Webhook signature failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   try {
     switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object;
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object;
 
-        const { orderId, userId, appId } = session.metadata;
+        const { orderId, userId, appId } = paymentIntent.metadata;
 
         if (appId !== "gabbs") {
           return res.json({ received: true });
@@ -98,18 +94,18 @@ export const stripeWebhook = async (req, res) => {
           paymentStatus: "PAID",
         });
 
-        // ✅ clear user cart
+        // ✅ clear cart
         await User.findByIdAndUpdate(userId, {
           cart: [],
         });
 
+        console.log("✅ Order paid & cart cleared");
         break;
       }
 
-      case "payment_intent.payment_failed": {
-        console.log("Payment failed");
+      case "payment_intent.canceled":
+        console.log("❌ Payment failed");
         break;
-      }
 
       default:
         console.log("Unhandled event:", event.type);
@@ -121,6 +117,7 @@ export const stripeWebhook = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 export const config = {
     api: {bodyparser: false }
 }
