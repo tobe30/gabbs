@@ -94,8 +94,9 @@ const handleApplyCoupon = async () => {
     toast.error(result.message);
   }
 };
+const [isOrdering, setIsOrdering] = useState(false);
 
-const { mutateAsync: placeOrder, isLoading: isOrdering } = useMutation({
+const { mutateAsync: placeOrder } = useMutation({
   mutationFn: async () => {
     if (!selectedAddressId) throw new Error("Please select a delivery address");
 
@@ -143,7 +144,7 @@ const { mutateAsync: placeOrder, isLoading: isOrdering } = useMutation({
 
 const handleCheckout = async (e) => {
   e.preventDefault();
-
+  setIsOrdering(true); // start spinner
   try {
     const order = await placeOrder();
     if (paymentMethod === "COD") {

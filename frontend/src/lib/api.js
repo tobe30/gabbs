@@ -12,7 +12,7 @@ export const getAuthAdmin = async () => {
     }
 };
 
-
+// { headers: { Authorization: `Bearer ${token}` } }
 
 export const addProductApi = async ({ formData, token }) => {
   const response = await axiosInstance.post(

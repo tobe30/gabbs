@@ -290,7 +290,7 @@ ratingsData?.ratings?.forEach((r) => {
           <div className="relative w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-y-auto max-h-[85vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
-                <h3 className="text-lg font-semibold">Order Details — #{selectedOrder.id}</h3>
+                <h3 className="text-lg font-semibold">Order Details — #{selectedOrder._id}</h3>
                 <p className="text-sm text-gray-500">
                   Placed {new Date(selectedOrder.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
                 </p>
