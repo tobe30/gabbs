@@ -2,15 +2,18 @@ import { axiosInstance } from "./axios";
 
 
 
-export const getAuthAdmin = async () => {
-    try {
-        const res = await axiosInstance.get("/users/check");
-        return res.data;
-    } catch (error) {
-        console.log("Error in getAdmin", error);
-        return null
-    }
+export const getAuthAdmin = async (token) => {
+  try {
+    const res = await axiosInstance.get("/users/check", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data;
+  } catch (error) {
+    console.log("Error in getAdmin", error);
+    return null;
+  }
 };
+
 
 // { headers: { Authorization: `Bearer ${token}` } }
 
