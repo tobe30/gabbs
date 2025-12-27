@@ -30,7 +30,16 @@ const Checkout = () => {
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
+
+
+  useEffect(() => {
+  if (!isSignedIn) {
+    toast.error("Please login to place an order");
+    navigate("/"); // or "/login"
+  }
+}, [isSignedIn, navigate]);
+
 
   // Fetch user addresses
   const { data } = useQuery({

@@ -184,3 +184,10 @@ export const getUserOrders = async (token) => {
   });
   return res.data; // return the array directly
 };
+
+export const getDashboard = async (token) => {
+  const res = await axiosInstance.get("/dashboard", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data; // { totalOrders, totalSales, totalProducts, activeCoupons }
+};

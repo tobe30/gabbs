@@ -2,9 +2,12 @@ import { Link } from "react-router-dom";
 
 import { useCart } from "../contexts/CartContext";
 import { Trash2, Plus, Minus } from "lucide-react";
+import { useUser } from "@clerk/clerk-react";
 
 const Cart = () => {
   const { cartItems, removeFromCart, decrementFromCart,  addToCart} = useCart();
+  const { isSignedIn } = useUser();
+
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -109,11 +112,20 @@ const Cart = () => {
                 </div>
               </div>
 
-              <Link to="/checkout">
-                <button className="w-full mb-3 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90">
-                  Proceed to Checkout
-                </button>
-              </Link>
+             {isSignedIn ? (
+  <Link to="/checkout">
+    <button className="w-full mb-3 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90">
+      Proceed to Checkout
+    </button>
+  </Link>
+) : (
+  <Link to="/sign-in">
+    <button disabled className="w-full mb-3 px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray/90">
+      Login to Checkout
+    </button>
+  </Link>
+)}
+
 
               <Link to="/products">
                 <button className="w-full px-6 py-3 border border-primary text-primary rounded-lg hover:bg-primary/10">

@@ -21,7 +21,7 @@ const AdminProduct = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 5;
+  const productsPerPage = 50;
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -170,8 +170,8 @@ const AdminProduct = () => {
           </td>
           <td className="p-2 text-gray-700">{product.name}</td>
           <td className="p-2 text-gray-700">{product.category}</td>
-          <td className="p-2 text-gray-400 line-through">₦{product.mrp}</td>
-          <td className="p-2 font-semibold text-gray-800">₦{product.price}</td>
+          <td className="p-2 text-gray-400 line-through">₦{product.mrp.toLocaleString()}</td>
+          <td className="p-2 font-semibold text-gray-800">₦{product.price.toLocaleString()}</td>
           <td className="p-2 text-gray-700">
             {getDiscountPercentage(product.mrp, product.price)}%
           </td>
