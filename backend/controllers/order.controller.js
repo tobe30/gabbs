@@ -82,18 +82,21 @@ export const createOrder = async (req, res) => {
         quantity: item.quantity,
       }));
 
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        line_items,
-        mode: "payment",
-        success_url: `${origin}/orders?success=true`,
-        cancel_url: `${origin}/cart`,
-        metadata: {
-          orderId: order._id.toString(),
-          userId,
-          appId: "gabbs",
-        },
-      });
+     const session = await stripe.checkout.sessions.create({
+  payment_method_types: ["card"],
+  line_items,
+  mode: "payment",
+  payment_intent_data: {
+    metadata: {
+      orderId: order._id.toString(),
+      userId,
+      appId: "gabbs",
+    },
+  },
+  success_url: `${origin}/orders?success=true`,
+  cancel_url: `${origin}/cart`,
+});
+
 
       return res.status(200).json({ session });
     }

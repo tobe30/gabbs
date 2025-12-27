@@ -58,6 +58,8 @@ export const clerkWebhooks = async (req, res) => {
 };
 
 
+
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const stripeWebhook = async (req, res) => {
@@ -70,7 +72,6 @@ export const stripeWebhook = async (req, res) => {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-
     console.log("🔥 Stripe webhook triggered:", event.type);
   } catch (err) {
     console.error("❌ Webhook signature failed:", err.message);
@@ -82,9 +83,10 @@ export const stripeWebhook = async (req, res) => {
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object;
         console.log("PaymentIntent metadata:", paymentIntent.metadata);
+
         const { orderId, userId, appId } = paymentIntent.metadata || {};
 
-        if (appId !== "gabbs") break;
+        if (!orderId || !userId || appId !== "gabbs") break;
 
         await Order.findByIdAndUpdate(orderId, {
           isPaid: true,
@@ -101,12 +103,13 @@ export const stripeWebhook = async (req, res) => {
         const paymentIntent = event.data.object;
         const { orderId } = paymentIntent.metadata || {};
 
-        await Order.findByIdAndUpdate(orderId, {
-          isPaid: false,
-          paymentStatus: "CANCELED",
-        });
-
-        console.log("❌ Payment canceled for order", orderId);
+        if (orderId) {
+          await Order.findByIdAndUpdate(orderId, {
+            isPaid: false,
+            paymentStatus: "CANCELED",
+          });
+          console.log("❌ Payment canceled for order", orderId);
+        }
         break;
       }
 
@@ -121,7 +124,6 @@ export const stripeWebhook = async (req, res) => {
   }
 };
 
-
 export const config = {
-    api: {bodyparser: false }
-}
+  api: { bodyparser: false },
+};
