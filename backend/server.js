@@ -28,17 +28,17 @@ app.use(cors({
     credentials: true,
 }));
 
-app.post('/api/stripe', express.raw({ type: 'application/json'}), stripeWebhook)
-app.use(clerkMiddleware());// Clerk middleware to handle authentication
 
 //routes
 app.get('/', (req, res) => {
     res.send('Hello World!'); 
 })
 
+app.post('/api/stripe', express.raw({ type: 'application/json'}), stripeWebhook)
 
 app.use(express.json());// To parse JSON request bodies
 
+app.use(clerkMiddleware());// Clerk middleware to handle authentication
 app.post('/clerk', express.json(), clerkWebhooks)
 app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
