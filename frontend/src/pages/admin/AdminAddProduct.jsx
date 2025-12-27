@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { addProductApi } from "../../lib/api";
 
-const categories = ["Electronics", "Fashion", "Home", "Books", "Sports"];
+const categories = ["Electronics", "Fashion", "Home & Kitchen", "Books", "Sports", "Toys", "Beauty"];
 
 const AdminAddProduct = () => {
   const navigate = useNavigate();

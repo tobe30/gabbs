@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Package, MapPin, Calendar, DollarSign, Eye, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/clerk-react";
 import { getUserOrders } from "../lib/api";
 import { axiosInstance } from "../lib/axios";
+import { useNavigate } from "react-router-dom";
 
 const Orders = () => {
   // mock orders in state so we can update / interact
@@ -14,10 +15,19 @@ const Orders = () => {
   const [ratingProduct, setRatingProduct] = useState(null);
   const [ratingValue, setRatingValue] = useState(0);
   const [reviewText, setReviewText] = useState("");
+    const navigate = useNavigate();
+  
   // const [ratedProducts, setRatedProducts] = useState({});
 
 
-  const { getToken } = useAuth();
+  const { getToken, isSignedIn } = useAuth();
+
+    useEffect(() => {
+    if (!isSignedIn) {
+      toast.error("Log in to view your orders.");
+      navigate("/"); // or "/login"
+    }
+  }, [isSignedIn, navigate]);
 
  // get orders 
 const { data, isLoading, isError  } = useQuery({

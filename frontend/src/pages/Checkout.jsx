@@ -35,7 +35,7 @@ const Checkout = () => {
 
   useEffect(() => {
   if (!isSignedIn) {
-    toast.error("Please login to place an order");
+    toast.error("Something went wrong.");
     navigate("/"); // or "/login"
   }
 }, [isSignedIn, navigate]);

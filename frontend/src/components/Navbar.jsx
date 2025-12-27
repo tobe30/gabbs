@@ -11,7 +11,7 @@ const Navbar = () => {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const menuItems = ["Home", "Products", "Categories", "About", "Contact"];
+  const menuItems = ["Home", "Products", "Categories", "About", "Contact", "Orders"];
 
   return (
     <nav className="sticky top-0 z-50 bg-white shadow-md">

@@ -179,7 +179,7 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     if (isSignedIn && guestCart.length > 0) {
      guestCart.forEach((item) => {
-    addToCartMutation.mutate({
+  addToCartMutation.mutate({
     productId: item.productId,
     name: item.name,
     price: item.price,

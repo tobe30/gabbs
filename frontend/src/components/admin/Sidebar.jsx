@@ -5,7 +5,7 @@ import { useUser } from "@clerk/clerk-react";
 
 const navItems = [
   { to: "/admin", label: "Dashboard", Icon: House },
-  { to: "/admin/product", label: "Add Product", Icon: SquarePenIcon },
+  { to: "/admin/product", label: "Product", Icon: SquarePenIcon },
   { to: "/admin/orders", label: "Orders", Icon: LayoutListIcon },
   { to: "/admin/coupons", label: "Coupons", Icon: TicketPercentIcon },
 ];

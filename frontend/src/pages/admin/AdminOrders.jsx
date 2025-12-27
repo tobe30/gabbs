@@ -84,7 +84,7 @@ const AdminOrders = () => {
         {orders.map((order) => (
           <tr key={order._id} className="border-b border-gray-200 hover:bg-gray-50">
             <td className="p-2 border border-gray-300 text-xs sm:text-sm">{order.userId?.name || order.userId}</td>
-            <td className="p-2 border border-gray-300 text-xs sm:text-sm">${order.total?.toFixed(2)}</td>
+            <td className="p-2 border border-gray-300 text-xs sm:text-sm">₦{order.total?.toLocaleString()}</td>
             <td className="p-2 border border-gray-300 text-xs sm:text-sm">{order.status}</td>
             <td className="p-2 border border-gray-300 text-xs sm:text-sm">{order.isPaid ? "Yes" : "No"}</td>
             <td className="p-2 border border-gray-300">
@@ -140,7 +140,7 @@ const AdminOrders = () => {
 
         <div className="space-y-2 sm:space-y-4 text-xs sm:text-sm">
           <p><b>Username:</b> {selectedOrder.userId?.name || "Unknown"}</p>
-          <p><b>Total:</b> ${selectedOrder.total?.toFixed(2)}</p>
+          <p><b>Total:</b> ₦{selectedOrder.total?.toLocaleString()}</p>
           <p><b>Status:</b> {selectedOrder.status}</p>
           <p><b>Paid:</b> {selectedOrder.isPaid ? "Yes" : "No"}</p>
           <p><b>Payment Method:</b> {selectedOrder.paymentMethod}</p>
@@ -162,8 +162,8 @@ const AdminOrders = () => {
                   <tr key={idx}>
                     <td className="p-1 sm:p-2 border border-gray-300">{item.productId?.name || "Unknown"}</td>
                     <td className="p-1 sm:p-2 border border-gray-300 text-center">{item.quantity}</td>
-                    <td className="p-1 sm:p-2 border border-gray-300 text-right">${item.price.toFixed(2)}</td>
-                    <td className="p-1 sm:p-2 border border-gray-300 text-right">${(item.quantity * item.price).toFixed(2)}</td>
+                    <td className="p-1 sm:p-2 border border-gray-300 text-right">₦{item.price.toLocaleString()}</td>
+                    <td className="p-1 sm:p-2 border border-gray-300 text-right">₦{(item.quantity * item.price).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
